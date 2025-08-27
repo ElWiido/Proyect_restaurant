@@ -1,8 +1,10 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column } from '@adonisjs/lucid/orm'
+import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
+import type { HasMany } from '@adonisjs/lucid/types/relations'
+import Pedido from './pedido.js'
 
 export default class Mesa extends BaseModel {
-  public static table = 'mesas' 
+  public static table = 'mesas'
 
   @column({ isPrimary: true })
   declare id_mesa: number
@@ -11,12 +13,15 @@ export default class Mesa extends BaseModel {
   declare numero: number
 
   @column()
-  declare estado: 'libre' | 'ocupado'
-
+  declare estado: 'disponible' | 'ocupada' | 'reservada'
 
   @column.dateTime({ autoCreate: true })
-  declare createdAt: DateTime
+  declare created_at: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
-  declare updatedAt: DateTime
+  declare updated_at: DateTime
+
+  // Relación con pedidos
+  @hasMany(() => Pedido, { foreignKey: 'id_mesa' })
+  declare pedidos: HasMany<typeof Pedido>
 }

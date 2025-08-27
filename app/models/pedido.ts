@@ -1,9 +1,10 @@
 import { DateTime } from 'luxon'
-import { BaseModel, column, belongsTo } from '@adonisjs/lucid/orm'
-import Mesa from './mesa.js'
+import { BaseModel, column, belongsTo, hasMany } from '@adonisjs/lucid/orm'
+import type { BelongsTo, HasMany } from '@adonisjs/lucid/types/relations'
 import Usuario from './usuario.js'
-
-
+import Mesa from './mesa.js'
+import DetallePedido from './detalle_pedido.js'
+import Pago from './pago.js'
 
 export default class Pedido extends BaseModel {
   public static table = 'pedidos'
@@ -18,18 +19,24 @@ export default class Pedido extends BaseModel {
   declare id_usuario: number
 
   @column()
-  declare estado: 'pendiente' | 'pagado' | 'cancelado' | 'en preparacion'
+  declare estado: 'pendiente' | 'preparacion' | 'servido' | 'cerrado'
 
-  @column.dateTime({ autoCreate: true })
+  @column.dateTime({autoCreate: true})
   declare fecha: DateTime
 
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updated_at: DateTime
 
   // Relaciones
-  @belongsTo(() => Mesa, { foreignKey: 'id_mesa' })
-  declare mesa: any
-
   @belongsTo(() => Usuario, { foreignKey: 'id_usuario' })
-  declare usuario: any
+  declare usuario: BelongsTo<typeof Usuario>
+
+  @belongsTo(() => Mesa, { foreignKey: 'id_mesa' })
+  declare mesa: BelongsTo<typeof Mesa>
+
+  @hasMany(() => DetallePedido, { foreignKey: 'id_pedido' })
+  declare detalles: HasMany<typeof DetallePedido>
+
+  @hasMany(() => Pago, { foreignKey: 'id_pedido' })
+  declare pagos: HasMany<typeof Pago>
 }
