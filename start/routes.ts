@@ -7,3 +7,6 @@ router.get('/', async () => {
 })
 
 import "./routes/usuarios.js";
+import "./routes/mesas.js";
+import "./routes/pagos.js"
+import "./routes/producto.js"

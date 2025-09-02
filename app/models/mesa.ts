@@ -13,7 +13,7 @@ export default class Mesa extends BaseModel {
   declare numero: number
 
   @column()
-  declare estado: 'disponible' | 'ocupada' | 'reservada'
+  declare estado: 'libre' | 'ocupada'
 
   @column.dateTime({ autoCreate: true })
   declare created_at: DateTime
