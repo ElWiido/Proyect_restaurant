@@ -19,7 +19,7 @@ export default class Pedido extends BaseModel {
   declare id_usuario: number
 
   @column()
-  declare estado: 'pendiente' | 'preparacion' | 'servido' | 'cerrado'
+  declare estado: 'pendiente' | 'pagado' | 'cancelado' | 'en preparacion'
 
   @column.dateTime({autoCreate: true})
   declare fecha: DateTime
