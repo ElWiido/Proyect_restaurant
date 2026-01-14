@@ -3,13 +3,13 @@ Esta API gestiona usuarios, productos, mesas, pedidos (con detalles) y pagos.
 Construida con AdonisJS, Lucid ORM y MySQL.
 
 ## Stack(Backend)
-Node Version: 22.18.0
-AdonisJS (HTTP, VineJS validators, Lucid ORM)
-Base de datos: MySql 9.4.0
+- Node Version: 22.18.0
+- AdonisJS (HTTP, VineJS validators, Lucid ORM)
+- Base de datos: MySql 9.4.0
 
 ## Stack(Frontend)
-Flutter 3.38.4
-Android Studio
+- Flutter 3.38.4
+- Android Studio
 
 ## Configuración
 1. Clonar el repo y entrar al proyecto.
