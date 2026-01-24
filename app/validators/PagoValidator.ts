@@ -17,7 +17,7 @@ export const PagoValidator = vine.compile(
       }),
 
     metodo_pago: vine.enum(['efectivo', 'transferencia']),
-
+    monto: vine.number().optional(),
   })
 )
 

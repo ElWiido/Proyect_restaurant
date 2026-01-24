@@ -10,10 +10,7 @@ export default class Usuario extends BaseModel {
   declare id_usuario: number
 
   @column()
-  declare nombre: string
-
-  @column()
-  declare correo: string
+  declare nombre_usuario: string
 
   @column()
   declare contrasena: string

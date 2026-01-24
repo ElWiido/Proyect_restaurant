@@ -14,6 +14,7 @@ export default class DetallePedidosController {
       id_pedido: detallepedido.id_pedido,
       id_producto: detallepedido.id_producto,
       detalle : detallepedido.detalle,
+      cantidad : detallepedido.cantidad,
       creado: detallepedido.created_at,
     })
   }
@@ -47,7 +48,7 @@ export default class DetallePedidosController {
   //Actualizar DetallePedido
   public async update({ params, request, response }: HttpContext) {
     const detallepedido = await DetallePedido.findOrFail(params.id)
-    const data = request.only(['id_pedido', 'id_producto', 'detalle'])
+    const data = request.only(['id_pedido', 'id_producto', 'detalle', 'cantidad'])
     const hora_actualizacion = DateTime.now().setZone('America/Bogota')
     detallepedido.merge({...data , updated_at:hora_actualizacion})
     await detallepedido.save()

@@ -14,8 +14,7 @@ export default class UsuariosController {
     const usuario = await Usuario.create({...data,contrasena: hashcontrasena, rol:'mesero', created_at:hora_local, updated_at:hora_local})
     return response.status(201).json({
       id_usuario: usuario.id_usuario,
-      nombre: usuario.nombre,
-      correo: usuario.correo,
+      nombre_usuario: usuario.nombre_usuario,
       rol: usuario.rol,
       Creado: usuario.created_at,
     })
@@ -43,7 +42,7 @@ export default class UsuariosController {
   //Actualizar usuario
   public async update({ params, request, response }: HttpContext) {
     const usuario = await Usuario.findOrFail(params.id)
-    const data = request.only(['nombre', 'correo', 'rol'])
+    const data = request.only(['nombre_usuario', 'rol'])
     const hora_actualizacion = DateTime.now().setZone('America/Bogota')
     usuario.merge({...data , updated_at:hora_actualizacion})
     await usuario.save()

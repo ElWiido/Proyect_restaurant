@@ -7,6 +7,8 @@ vine.messagesProvider = new SimpleMessagesProvider({
   'detalles.minLength': 'Debe incluir al menos un plato en el pedido',
   'detalles.*.id_producto.required': 'Cada plato debe tener un ID de producto',
   'detalles.*.id_producto.number': 'El ID del producto debe ser un número',
+  'detalles.*.cantidad.required': 'Cada plato debe tener una cantidad',
+  'detalles.*.cantidad.min': 'La cantidad debe ser mayor que 0',
 })
 
 export const PedidoValidator = vine.compile(
@@ -22,6 +24,7 @@ export const PedidoValidator = vine.compile(
         vine.object({
           id_producto: vine.number().min(1),
           detalle: vine.string().optional(),
+          cantidad: vine.number().min(1),
         })
       )
       .minLength(1),

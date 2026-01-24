@@ -19,6 +19,9 @@ export default class DetallePedido extends BaseModel {
   @column()
   declare detalle: string
 
+  @column()
+  declare cantidad: number
+
   @column.dateTime({ autoCreate: true })
   declare created_at: DateTime
 

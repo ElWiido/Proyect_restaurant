@@ -15,6 +15,7 @@ export default class extends BaseSchema {
                                         .onDelete('CASCADE')
                                         .notNullable()
       table.string('detalle',255).notNullable() 
+      table.integer('cantidad').notNullable()
 
       table.timestamp('created_at').defaultTo(this.now())
       table.timestamp('updated_at')
