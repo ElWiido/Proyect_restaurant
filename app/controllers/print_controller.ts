@@ -1,9 +1,11 @@
 import ThermalPrinter from "node-thermal-printer";
 import PrinterTypes from "node-thermal-printer";
+import 'dotenv/config';
 
 interface TicketDetalle {
   producto: string;
   nota?: string;
+  cantidad: number;
 }
 
 export async function imprimirPedidoPOS(data: {
@@ -15,13 +17,12 @@ export async function imprimirPedidoPOS(data: {
 
   const printer = new ThermalPrinter.printer({
     type: PrinterTypes.types.EPSON,
-    interface: "\\\\localhost\\POS-80C", // tu impresora compartida de Windows
+    interface: `tcp://${process.env.IP_PRINTER}:9100`, 
     characterSet: "SLOVENIA" as any,
     removeSpecialCharacters: false,
   });
 
   // CENTRADO y título
-  printer.beep(1,3);
   printer.alignCenter();
   printer.bold(true);
   printer.setTextSize(1, 1);
@@ -57,7 +58,8 @@ export async function imprimirPedidoPOS(data: {
   data.detalles.forEach((d, i) => {
     printer.bold(true);
     printer.setTextSize(1, 1);
-    printer.println(`${i + 1}. ${d.producto}`);
+    printer.println(`${i + 1}. ${d.producto}    `+`X${d.cantidad}`);
+    
 
     printer.setTextNormal();
     printer.bold(false);

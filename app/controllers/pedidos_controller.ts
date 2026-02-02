@@ -88,7 +88,8 @@ export default class PedidosController {
           pedidoId: pedido.id_pedido,
           detalles: detallesCompletos.map((d) => ({
             producto: d.producto.nombre,
-            nota: d.detalle
+            nota: d.detalle,
+            cantidad: d.cantidad
           }))
         })
       } catch (error) {
@@ -278,7 +279,8 @@ export default class PedidosController {
           detalles: [
             {
               producto: `${producto.nombre} x${data.cantidad}`,
-              nota: data.detalle || ''
+              nota: data.detalle || '',
+              cantidad: data.cantidad
             }
           ]
         })

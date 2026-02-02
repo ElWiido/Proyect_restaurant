@@ -56,8 +56,7 @@ Construida con AdonisJS, Lucid ORM y MySQL.
 Body (crear):
 ```json
 {
-  "nombre": "Juan",
-  "correo": "juan@example.com",
+  "nombre_usuario": "Juan",
   "contrasena": "1234"
 }
 ```
