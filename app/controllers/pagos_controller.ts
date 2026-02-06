@@ -24,8 +24,7 @@ export default class PagosController {
 
       const totalRow = await DetallePedido.query({ client: trx })
         .where('id_pedido', data.id_pedido)
-        .join('productos', 'productos.id_producto', 'detalle_pedidos.id_producto')
-        .select(db.raw('SUM(productos.precio * detalle_pedidos.cantidad) as total'))
+        .select(db.raw('SUM(detalle_pedidos.precio_unitario * detalle_pedidos.cantidad) as total'))
         .first()
 
       // Tomar el monto enviado desde el frontend o calcularlo automáticamente

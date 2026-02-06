@@ -18,36 +18,35 @@ interface DetalleInput {
 
 export default class PedidosController {
 
-  // Crear un nuevo pedido con detalle
   public async create({ request, response }: HttpContext) {
     const data = await request.validateUsing(PedidoValidator) as {
       id_mesa: number
       id_usuario: number
       detalles: DetalleInput[]
     }
-    
-    const hora_local = DateTime.now().setZone('America/Bogota')
 
+    const hora_local = DateTime.now().setZone('America/Bogota')
     const trx = await db.transaction()
+
     try {
       const mesa = await Mesa.find(data.id_mesa)
       const usuario = await Usuario.find(data.id_usuario)
-      
-      if (!mesa) {
-        return response.notFound({ error: 'Mesa no encontrada' })
-      }
-      if (!usuario) {
-        return response.notFound({ error: 'Usuario no encontrado' })
-      }
 
-      const productosIds = data.detalles.map((d) => d.id_producto)
+      if (!mesa) return response.notFound({ error: 'Mesa no encontrada' })
+      if (!usuario) return response.notFound({ error: 'Usuario no encontrado' })
+
+      // 🔥 Traer solo lo necesario
       const productos = await Producto.query()
-        .whereIn('id_producto', productosIds)
-        .exec()
-      
-      if (productos.length !== productosIds.length) {
-        return response.notFound({ error: 'Uno o más productos no existen' })
-      }
+        .whereIn(
+          'id_producto',
+          data.detalles.map(d => d.id_producto)
+        )
+        .select('id_producto', 'nombre', 'precio')
+
+      // 🚀 Map ultra rápido
+      const productosMap = new Map(
+        productos.map(p => [p.id_producto, p])
+      )
 
       const pedido = await Pedido.create({
         id_mesa: data.id_mesa,
@@ -60,47 +59,50 @@ export default class PedidosController {
         .where('id_mesa', data.id_mesa)
         .update({ estado: 'ocupada' })
 
-      const detalles = data.detalles.map((detalle) => ({
-        id_pedido: pedido.id_pedido,
-        id_producto: detalle.id_producto,
-        detalle: detalle.detalle || '',
-        cantidad: detalle.cantidad,
-        created_at: hora_local,
-        updated_at: hora_local,
-      }))
-      await DetallePedido.createMany(detalles, { client: trx })
+      const detalles = data.detalles.map((d) => {
+        const producto = productosMap.get(d.id_producto)
 
+        return {
+          id_pedido: pedido.id_pedido,
+          id_producto: d.id_producto,
+          detalle: d.detalle || '',
+          cantidad: d.cantidad,
+          precio_unitario: producto?.precio ?? 0,
+          created_at: hora_local,
+          updated_at: hora_local,
+        }
+      })
+
+      await DetallePedido.createMany(detalles, { client: trx })
       await trx.commit()
 
-      // 🔎 Consultar datos completos para imprimir
-      const mesaCompleta = await Mesa.findOrFail(data.id_mesa)
-      const usuarioCompleto = await Usuario.findOrFail(data.id_usuario)
+      // ✅ RESPONDER RÁPIDO
+      response.status(201).json({
+        id_pedido: pedido.id_pedido,
+        id_mesa: pedido.id_mesa,
+        id_usuario: pedido.id_usuario,
+        estado: pedido.estado,
+        detalles,
+        creado: pedido.fecha,
+      })
 
-      const detallesCompletos = await DetallePedido.query()
-        .where('id_pedido', pedido.id_pedido)
-        .preload('producto')
+      // 🖨️ Imprimir (NO bloquea)
+      imprimirPedidoPOS({
+        mesa: mesa.numero ?? mesa.id_mesa,
+        mesero: usuario.nombre_usuario,
+        pedidoId: pedido.id_pedido,
+        detalles: detalles.map(d => ({
+          producto: productosMap.get(d.id_producto)?.nombre ?? 'Producto',
+          nota: d.detalle,
+          cantidad: d.cantidad
+        }))
+      }).catch(err => {
+        console.error('Error impresión POS:', err)
+      })
 
-      // Imprimir pedido en POS
-      try {
-        await imprimirPedidoPOS({
-          mesa: mesaCompleta.numero ?? mesaCompleta.id_mesa, 
-          mesero: `${usuarioCompleto.nombre_usuario}`,
-          pedidoId: pedido.id_pedido,
-          detalles: detallesCompletos.map((d) => ({
-            producto: d.producto.nombre,
-            nota: d.detalle,
-            cantidad: d.cantidad
-          }))
-        })
-      } catch (error) {
-        console.error("Error al imprimir pedido:", error)
-      }
-
-
-      // Obtener instancia de Socket.IO
+      // 📡 Sockets (no bloquea)
       const io = getIO()
 
-      // Emitir evento WebSocket a canal 'mesas'
       io.to('mesas').emit('mesa_actualizada', {
         id_mesa: data.id_mesa,
         estado: 'ocupada',
@@ -108,33 +110,25 @@ export default class PedidosController {
         timestamp: new Date(),
       })
 
-      // Emitir evento WebSocket a canal 'pedidos'
       io.to('pedidos').emit('pedido_creado', {
         id_pedido: pedido.id_pedido,
         id_mesa: data.id_mesa,
         id_usuario: data.id_usuario,
         estado: 'pendiente',
-        detalles: detalles,
+        detalles,
         timestamp: new Date(),
       })
 
-      return response.status(201).json({
-        id_pedido: pedido.id_pedido,
-        id_mesa: pedido.id_mesa,
-        id_usuario: pedido.id_usuario,
-        estado: pedido.estado,
-        detalles: detalles,
-        creado: pedido.fecha,
-      })
     } catch (error: any) {
       await trx.rollback()
       console.error(error)
-      return response.status(500).json({ 
+      return response.status(500).json({
         error: 'Error al crear pedido con detalle',
-        detalle: error.message 
+        detalle: error.message
       })
     }
   }
+
 
   public async findAll({ request }: HttpContext) {
     const page = request.input('page', 1)
@@ -154,10 +148,22 @@ export default class PedidosController {
       const pedido = await Pedido.query()
         .where('id_mesa', params.id)
         .preload('detalles', (query) => {
-          query.preload('producto')
+          query
+            .select([
+              'id_detalle',
+              'id_pedido',
+              'id_producto',
+              'detalle',
+              'cantidad',
+              'precio_unitario',
+              'created_at',
+              'updated_at',
+            ])
+            .preload('producto')
         })
         .orderBy('fecha', 'desc')
         .firstOrFail()
+
       return response.json(pedido)
     } catch {
       return response.notFound({ error: 'Pedido no encontrado' })

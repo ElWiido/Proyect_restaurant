@@ -1,6 +1,6 @@
 import type { HttpContext } from '@adonisjs/core/http'
 import { DetallePedidoValidator } from '#validators/Detalle_PedidoValidator'
-import DetallePedido from '#models/detalle_pedido'
+import DetallePedido from '#models/detalle_pedido' 
 import { DateTime } from 'luxon'
 
 export default class DetallePedidosController {
@@ -9,12 +9,17 @@ export default class DetallePedidosController {
   public async create({ request, response }: HttpContext) {
     const data = await request.validateUsing(DetallePedidoValidator)
     const hora_local = DateTime.now().setZone('America/Bogota')
-    const detallepedido = await DetallePedido.create({ ...data, created_at: hora_local, updated_at: hora_local })
+    const detallepedido = await DetallePedido.create({
+      ...data,
+      created_at: hora_local,
+      updated_at: hora_local,
+    })
     return response.status(201).json({
       id_pedido: detallepedido.id_pedido,
       id_producto: detallepedido.id_producto,
-      detalle : detallepedido.detalle,
-      cantidad : detallepedido.cantidad,
+      detalle: detallepedido.detalle,
+      cantidad: detallepedido.cantidad,
+      precioUnitario: detallepedido.precioUnitario,
       creado: detallepedido.created_at,
     })
   }
@@ -45,13 +50,15 @@ export default class DetallePedidosController {
     }
   }
 
-  //Actualizar DetallePedido
+  // Actualizar DetallePedido
   public async update({ params, request, response }: HttpContext) {
     const detallepedido = await DetallePedido.findOrFail(params.id)
-    const data = request.only(['id_pedido', 'id_producto', 'detalle', 'cantidad'])
+    const data = request.only(['id_pedido','id_producto','detalle','cantidad','precio_unitario',])
     const hora_actualizacion = DateTime.now().setZone('America/Bogota')
-    detallepedido.merge({...data , updated_at:hora_actualizacion})
+    detallepedido.merge({...data,updated_at: hora_actualizacion,})
+
     await detallepedido.save()
     return response.json(detallepedido)
   }
+
 }

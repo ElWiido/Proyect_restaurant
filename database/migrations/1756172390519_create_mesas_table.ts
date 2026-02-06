@@ -6,7 +6,7 @@ export default class extends BaseSchema {
   async up() {
     this.schema.createTable(this.tableName, (table) => {
       table.increments('id_mesa') 
-      table.integer('numero').unique() 
+      table.string('numero', 50).unique() 
       table.enum('estado', ['libre', 'ocupada']).notNullable() 
 
 

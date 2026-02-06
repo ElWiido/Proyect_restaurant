@@ -10,7 +10,7 @@ export default class Mesa extends BaseModel {
   declare id_mesa: number
 
   @column()
-  declare numero: number
+  declare numero: string
 
   @column()
   declare estado: 'libre' | 'ocupada'

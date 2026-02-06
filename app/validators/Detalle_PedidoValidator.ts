@@ -16,6 +16,6 @@ export const DetallePedidoValidator = vine.compile(
     detalle: vine.string()
         .maxLength(200),
     cantidad: vine.number()
-        .min(1)
+        .min(1),
   })
 )

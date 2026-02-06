@@ -21,7 +21,7 @@ export default class MesasController {
   //Listar todas las mesas (con paginación)
   public async findAll({ request }: HttpContext) {
     const page = request.input('page', 1)
-    const perPage = request.input('perPage', 20)
+    const perPage = request.input('perPage', 40)
 
     const mesas = await Mesa.query().paginate(page, perPage)
     return mesas

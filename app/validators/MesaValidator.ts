@@ -6,8 +6,6 @@ vine.messagesProvider = new SimpleMessagesProvider({
 
 export const MesaValidator = vine.compile(
   vine.object({
-    numero: vine.number()
-      .min(1)
-      .max(40),
+    numero: vine.string(),
   })
 )
