@@ -16,6 +16,15 @@ interface DetalleInput {
   cantidad: number
 }
 
+const productosSoloBebidas = [
+  'Gaseosa Personal',
+  'Gaseosa 1.5L',
+  'Cerveza',
+  'Cafe',
+  'Empanada',
+]
+
+
 export default class PedidosController {
 
   public async create({ request, response }: HttpContext) {
@@ -35,7 +44,6 @@ export default class PedidosController {
       if (!mesa) return response.notFound({ error: 'Mesa no encontrada' })
       if (!usuario) return response.notFound({ error: 'Usuario no encontrado' })
 
-      // 🔥 Traer solo lo necesario
       const productos = await Producto.query()
         .whereIn(
           'id_producto',
@@ -43,7 +51,6 @@ export default class PedidosController {
         )
         .select('id_producto', 'nombre', 'precio')
 
-      // 🚀 Map ultra rápido
       const productosMap = new Map(
         productos.map(p => [p.id_producto, p])
       )
@@ -76,7 +83,6 @@ export default class PedidosController {
       await DetallePedido.createMany(detalles, { client: trx })
       await trx.commit()
 
-      // ✅ RESPONDER RÁPIDO
       response.status(201).json({
         id_pedido: pedido.id_pedido,
         id_mesa: pedido.id_mesa,
@@ -86,21 +92,31 @@ export default class PedidosController {
         creado: pedido.fecha,
       })
 
-      // 🖨️ Imprimir (NO bloquea)
-      imprimirPedidoPOS({
-        mesa: mesa.numero ?? mesa.id_mesa,
-        mesero: usuario.nombre_usuario,
-        pedidoId: pedido.id_pedido,
-        detalles: detalles.map(d => ({
-          producto: productosMap.get(d.id_producto)?.nombre ?? 'Producto',
-          nota: d.detalle,
-          cantidad: d.cantidad
-        }))
-      }).catch(err => {
-        console.error('Error impresión POS:', err)
+      //Verificar si TODOS los productos son solo bebidas simples
+      const todosSonSoloBebidas = detalles.every(d => {
+        const producto = productosMap.get(d.id_producto)
+        return productosSoloBebidas
+          .map(p => p.toLowerCase())
+          .includes((producto?.nombre ?? '').toLowerCase())
       })
 
-      // 📡 Sockets (no bloquea)
+      if (!todosSonSoloBebidas) {
+        //Imprimir TODO el pedido
+        imprimirPedidoPOS({
+          mesa: mesa.numero ?? mesa.id_mesa,
+          mesero: usuario.nombre_usuario,
+          pedidoId: pedido.id_pedido,
+          detalles: detalles.map(d => ({
+            producto: productosMap.get(d.id_producto)?.nombre ?? 'Producto',
+            nota: d.detalle,
+            cantidad: d.cantidad
+          }))
+        }).catch(err => {
+          console.error('Error impresión POS:', err)
+        })
+      }
+
+      //Sockets
       const io = getIO()
 
       io.to('mesas').emit('mesa_actualizada', {
@@ -266,35 +282,47 @@ export default class PedidosController {
         id_producto: data.id_producto,
         cantidad: data.cantidad,
         detalle: data.detalle || '',
+        precioUnitario: producto?.precio ?? 0,
         created_at: hora,
         updated_at: hora,
       }, { client: trx })
 
       await trx.commit()
 
-      // 🔎 Traer datos completos para imprimir
-      const mesa = await Mesa.findOrFail(pedido.id_mesa)
-      const usuario = await Usuario.findOrFail(pedido.id_usuario)
+      //Respuesta inmediata
+      response.status(201).json({
+        message: 'Producto agregado',
+        detalle
+      })
 
-      // 🖨️ IMPRIMIR SOLO EL NUEVO PRODUCTO
-      try {
-        await imprimirPedidoPOS({
-          mesa: mesa.numero ?? mesa.id_mesa,
-          mesero: usuario.nombre_usuario,
-          pedidoId: pedido.id_pedido,
-          detalles: [
-            {
-              producto: `${producto.nombre} x${data.cantidad}`,
-              nota: data.detalle || '',
-              cantidad: data.cantidad
-            }
-          ]
-        })
-      } catch (error) {
-        console.error('Error al imprimir agregado:', error)
-      }
+      setImmediate(async () => {
+        try {
+          const mesa = await Mesa.findOrFail(pedido.id_mesa)
+          const usuario = await Usuario.findOrFail(pedido.id_usuario)
 
-      // 🔔 Socket
+          const bebidasSet = new Set(productosSoloBebidas.map(p => p.toLowerCase()))
+          const esSoloBebida = bebidasSet.has(producto.nombre.toLowerCase())
+
+          if (!esSoloBebida) {
+            await imprimirPedidoPOS({
+              mesa: mesa.numero ?? mesa.id_mesa,
+              mesero: usuario.nombre_usuario,
+              pedidoId: pedido.id_pedido,
+              detalles: [
+                {
+                  producto: `${producto.nombre} x${data.cantidad}`,
+                  nota: data.detalle || '',
+                  cantidad: data.cantidad
+                }
+              ]
+            })
+          }
+        } catch (error) {
+          console.error('Error impresión async:', error)
+        }
+      })
+
+      //Socket
       const io = getIO()
       io.to('pedidos').emit('producto_agregado', {
         id_pedido: pedido.id_pedido,
