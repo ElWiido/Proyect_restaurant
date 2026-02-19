@@ -8,7 +8,7 @@ export default class extends BaseSchema {
       table.increments('id_producto') 
       table.string('nombre', 100).notNullable() 
       table.decimal('precio').notNullable() 
-      table.enum('categoria', ['A la carta', 'bebida', 'ejecutivo']).notNullable() 
+      table.enum('categoria', ['carta', 'bebida', 'ejecutivo', 'asados', 'desayuno','otros']).notNullable() 
       table.string('descripcion', 100).notNullable() 
 
       table.timestamp('created_at')

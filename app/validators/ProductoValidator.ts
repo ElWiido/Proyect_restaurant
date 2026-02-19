@@ -6,7 +6,7 @@ vine.messagesProvider = new SimpleMessagesProvider({
     'precio.min': 'El precio debe ser mayor que 0',
     'precio.max': 'El precio debe ser menor que 10,000,000',
     'categoria.required': 'La categoría es obligatoria',
-    'categoria.enum': 'La categoría debe ser "A la carta" , "bebida" o "ejecutivo"',
+    'categoria.enum': 'La categoría debe ser "carta", "bebida", "ejecutivo", "asados", "desayuno" o "otros"',
     'descripcion.required': 'La descripción es obligatoria',
     'descripcion.minLength': 'La descripción debe tener mínimo 5 caracteres',
 })
@@ -21,7 +21,7 @@ export const ProductoValidator = vine.compile(
         .min(1)
         .max(10000000),
 
-    categoria: vine.enum(['A la carta', 'bebida', 'ejecutivo']),
+    categoria: vine.enum(['carta', 'bebida', 'ejecutivo', 'asados', 'desayuno','otros']),
 
     descripcion: vine.string()
         .minLength(5)

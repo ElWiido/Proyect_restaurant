@@ -16,7 +16,7 @@ export default class Producto extends BaseModel {
   declare precio: number
 
   @column()
-  declare categoria: 'A la carta' | 'bebida' | 'ejecutivo'
+  declare categoria: 'carta' | 'bebida' | 'ejecutivo' | 'asados' | 'desayuno' | 'otros'
 
   @column()
   declare descripcion: string

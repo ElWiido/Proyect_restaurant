@@ -22,6 +22,7 @@ const productosSoloBebidas = [
   'Cerveza',
   'Cafe',
   'Empanada',
+  'Icopor',
 ]
 
 
@@ -260,90 +261,100 @@ export default class PedidosController {
 
       if (pedido.estado === 'cancelado' || pedido.estado === 'pagado') {
         await trx.rollback()
-        return response.badRequest({ error: 'No se puede modificar un pedido cerrado' })
+        return response.badRequest({ error: 'Pedido cerrado' })
       }
 
-      const data = request.only(['id_producto', 'cantidad', 'detalle']) as {
-        id_producto: number
-        cantidad: number
-        detalle?: string
+      const data = request.only(['productos']) as {
+        productos: {
+          id_producto: number
+          cantidad: number
+          detalle?: string
+        }[]
       }
 
-      const producto = await Producto.find(data.id_producto)
-      if (!producto) {
+      if (!data.productos || data.productos.length === 0) {
         await trx.rollback()
-        return response.notFound({ error: 'Producto no existe' })
+        return response.badRequest({ error: 'No hay productos' })
       }
+
+      const ids = data.productos.map(p => p.id_producto)
+
+      const productosDB = await Producto.query()
+        .whereIn('id_producto', ids)
+
+      const productosMap = new Map(
+        productosDB.map(p => [p.id_producto, p])
+      )
 
       const hora = DateTime.now().setZone('America/Bogota')
 
-      const detalle = await DetallePedido.create({
-        id_pedido: pedido.id_pedido,
-        id_producto: data.id_producto,
-        cantidad: data.cantidad,
-        detalle: data.detalle || '',
-        precioUnitario: producto?.precio ?? 0,
-        created_at: hora,
-        updated_at: hora,
-      }, { client: trx })
+      const detalles = data.productos.map(p => {
+        const producto = productosMap.get(p.id_producto)
 
-      await trx.commit()
-
-      //Respuesta inmediata
-      response.status(201).json({
-        message: 'Producto agregado',
-        detalle
+        return {
+          id_pedido: pedido.id_pedido,
+          id_producto: p.id_producto,
+          cantidad: p.cantidad,
+          detalle: p.detalle || '',
+          precio_unitario: producto?.precio ?? 0,
+          created_at: hora,
+          updated_at: hora,
+        }
       })
 
+      await DetallePedido.createMany(detalles, { client: trx })
+      await trx.commit()
+
+      //IMPRESIÓN EN UNA SOLA COMANDA
       setImmediate(async () => {
         try {
           const mesa = await Mesa.findOrFail(pedido.id_mesa)
           const usuario = await Usuario.findOrFail(pedido.id_usuario)
 
-          const bebidasSet = new Set(productosSoloBebidas.map(p => p.toLowerCase()))
-          const esSoloBebida = bebidasSet.has(producto.nombre.toLowerCase())
+          //Validar si TODOS los productos son solo bebidas
+          const todosSonSoloBebidas = detalles.every(d => {
+            const producto = productosMap.get(d.id_producto)
+            return productosSoloBebidas
+              .map(p => p.toLowerCase())
+              .includes((producto?.nombre ?? '').toLowerCase())
+          })
 
-          if (!esSoloBebida) {
+          //Solo imprimir si NO son solo bebidas
+          if (!todosSonSoloBebidas) {
             await imprimirPedidoPOS({
               mesa: mesa.numero ?? mesa.id_mesa,
               mesero: usuario.nombre_usuario,
               pedidoId: pedido.id_pedido,
-              detalles: [
-                {
-                  producto: `${producto.nombre} x${data.cantidad}`,
-                  nota: data.detalle || '',
-                  cantidad: data.cantidad
-                }
-              ]
+              detalles: detalles.map(d => ({
+                producto: productosMap.get(d.id_producto)?.nombre ?? 'Producto',
+                nota: d.detalle,
+                cantidad: d.cantidad
+              }))
             })
           }
-        } catch (error) {
-          console.error('Error impresión async:', error)
+
+        } catch (err) {
+          console.error('Error impresión lote:', err)
         }
       })
 
-      //Socket
+      //SOCKET
       const io = getIO()
-      io.to('pedidos').emit('producto_agregado', {
+      io.to('pedidos').emit('productos_agregados', {
         id_pedido: pedido.id_pedido,
-        producto: {
-          id_producto: producto.id_producto,
-          nombre: producto.nombre,
-          cantidad: data.cantidad,
-          detalle: data.detalle || ''
-        },
+        productos: detalles,
         timestamp: new Date(),
       })
 
       return response.status(201).json({
-        message: 'Producto agregado e impreso',
-        detalle
+        message: 'Productos agregados en lote',
+        detalles
       })
 
     } catch (error: any) {
       await trx.rollback()
       console.error(error)
-      return response.internalServerError({ error: 'Error al agregar producto' })
+      return response.internalServerError({ error: 'Error al agregar productos' })
     }
   }
 
