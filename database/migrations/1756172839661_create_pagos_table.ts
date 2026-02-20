@@ -10,7 +10,7 @@ export default class extends BaseSchema {
                                         .inTable('pedidos')  
                                         .onDelete('CASCADE')
                                         .notNullable()
-      table.enum('metodo_pago', ['efectivo', 'transferencia']).notNullable() 
+      table.enum('metodo_pago', ['efectivo', 'transferencia', 'anotar']).notNullable() 
       table.decimal('monto').notNullable()
 
       table.timestamp('created_at').defaultTo(this.now())

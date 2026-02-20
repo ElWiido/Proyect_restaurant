@@ -19,12 +19,15 @@ app.ready(async () => {
       origin: '*',
       methods: ['GET', 'POST'],
     },
+    // ✅ detecta clientes caídos más rápido y permite reconexión
+    pingTimeout: 10000,
+    pingInterval: 5000,
   })
 
   console.log('✅ Socket.IO inicializado')
 
   io.on('connection', (socket: Socket) => {
-    console.log('✅ Cliente conectado:', socket.id)
+    console.log('Cliente conectado:', socket.id)
 
     socket.on('join_mesas', () => {
       socket.join('mesas')
@@ -41,11 +44,11 @@ app.ready(async () => {
       console.log(`📌 ${socket.id} unido a canal: pagos`)
     })
 
-    socket.on('disconnect', () => {
-      console.log('❌ Cliente desconectado:', socket.id)
+    socket.on('disconnect', (reason) => {
+      //loguea el motivo de desconexión para debug
+      console.log(`❌ Cliente desconectado: ${socket.id} — motivo: ${reason}`)
     })
   })
 })
-
 
 export { io }

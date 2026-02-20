@@ -100,11 +100,12 @@ export default class PagosController {
     }
   }
 
-  //Mostrar el total de pagos realizados en una fecha específica sumados
+  //Mostrar el total de pagos realizados en una fecha específica sumados y excluyendo los pagos anotados
   public async findByDate({ params, response }: HttpContext) {
     try {
       const row = await Pago.query()
         .whereRaw('DATE(created_at) = ?', [params.fecha])
+        .where('metodo_pago', '!=', 'anotar') // ✅ excluye los anotados
         .sum('monto as total')
         .first()
 

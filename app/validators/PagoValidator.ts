@@ -4,7 +4,7 @@ vine.messagesProvider = new SimpleMessagesProvider({
     'id_pedido.required': 'El ID del pedido es obligatorio',
     'id_pedido.exists': 'El ID del pedido no existe',
     'metodo_pago.required': 'El método de pago es obligatorio',
-    'metodo_pago.enum': 'El método de pago debe ser "efectivo" o "transferencia"',
+    'metodo_pago.enum': 'El método de pago debe ser "efectivo", "transferencia" o "anotar"',
 })
 
 export const PagoValidator = vine.compile(
@@ -16,7 +16,7 @@ export const PagoValidator = vine.compile(
         return !!pedido 
       }),
 
-    metodo_pago: vine.enum(['efectivo', 'transferencia']),
+    metodo_pago: vine.enum(['efectivo', 'transferencia', 'anotar']),
     monto: vine.number().optional(),
   })
 )

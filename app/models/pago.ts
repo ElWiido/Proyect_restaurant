@@ -14,7 +14,7 @@ export default class Pago extends BaseModel {
   declare id_pedido: number
 
   @column()
-  declare metodo_pago: 'efectivo' | 'transferencia'
+  declare metodo_pago: 'efectivo' | 'transferencia' | 'anotar'
 
   @column()
   declare monto: number

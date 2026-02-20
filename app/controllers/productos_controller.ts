@@ -23,7 +23,7 @@ export default class ProductosController {
   //Listar todos los productos (con paginación)
   public async findAll({ request }: HttpContext) {
     const page = request.input('page', 1)
-    const perPage = request.input('perPage', 40)
+    const perPage = request.input('perPage', 80)
 
     const productos = await Producto.query().paginate(page, perPage)
     return productos
