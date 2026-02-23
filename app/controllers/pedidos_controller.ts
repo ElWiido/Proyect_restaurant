@@ -358,4 +358,68 @@ export default class PedidosController {
     }
   }
 
+  //Mesas pendientes
+  public async findPendientesByMesa({ params, response }: HttpContext) {
+    try {
+      const pedidos = await Pedido.query()
+        .where('id_mesa', params.id)
+        .where('estado', 'pendiente')
+        .preload('detalles', (query) => {
+          query
+            .select([
+              'id_detalle',
+              'id_pedido',
+              'id_producto',
+              'detalle',
+              'cantidad',
+              'precio_unitario',
+              'created_at',
+              'updated_at',
+            ])
+            .preload('producto')
+        })
+        .orderBy('fecha', 'desc')
+
+      return response.json(pedidos)
+    } catch (error) {
+      console.error(error)
+      return response.internalServerError({ error: 'Error al buscar pedidos pendientes' })
+    }
+  }
+
+  // Cancelar/eliminar pedido
+  public async destroy({ params, response }: HttpContext) {
+    const trx = await db.transaction()
+    try {
+      const pedido = await Pedido.findOrFail(params.id)
+
+      // Eliminar detalles primero
+      await DetallePedido.query({ client: trx })
+        .where('id_pedido', pedido.id_pedido)
+        .delete()
+
+      // Liberar la mesa
+      await Mesa.query({ client: trx })
+        .where('id_mesa', pedido.id_mesa)
+        .update({ estado: 'libre' })
+
+      await pedido.useTransaction(trx).delete()
+      await trx.commit()
+
+      // Socket
+      const io = getIO()
+      io.to('mesas').emit('mesa_actualizada', {
+        id_mesa: pedido.id_mesa,
+        estado: 'libre',
+        timestamp: new Date(),
+      })
+
+      return response.json({ message: 'Pedido cancelado exitosamente' })
+    } catch (error) {
+      await trx.rollback()
+      console.error(error)
+      return response.status(500).json({ error: 'Error al cancelar pedido' })
+    }
+  }
+
 }

@@ -2,6 +2,11 @@ import type { HttpContext } from '@adonisjs/core/http'
 import { DetallePedidoValidator } from '#validators/Detalle_PedidoValidator'
 import DetallePedido from '#models/detalle_pedido' 
 import { DateTime } from 'luxon'
+import { imprimirPedidoPOS } from './print_controller.js'
+import Pedido from '#models/pedido'
+import Mesa from '#models/mesa'
+import Usuario from '#models/usuario'
+import Producto from '#models/producto'
 
 export default class DetallePedidosController {
 
@@ -53,12 +58,39 @@ export default class DetallePedidosController {
   // Actualizar DetallePedido
   public async update({ params, request, response }: HttpContext) {
     const detallepedido = await DetallePedido.findOrFail(params.id)
-    const data = request.only(['id_pedido','id_producto','detalle','cantidad','precio_unitario',])
+    const data = request.only(['id_pedido', 'id_producto', 'cantidad', 'precio_unitario'])
     const hora_actualizacion = DateTime.now().setZone('America/Bogota')
-    detallepedido.merge({...data,updated_at: hora_actualizacion,})
 
+    const detalle = request.body().hasOwnProperty('detalle')
+      ? (request.input('detalle') ?? '')
+      : detallepedido.detalle
+
+    detallepedido.merge({ ...data, detalle, updated_at: hora_actualizacion })
     await detallepedido.save()
+
+    // Imprimir comanda actualizada
+    setImmediate(async () => {
+      try {
+        const pedido = await Pedido.findOrFail(detallepedido.id_pedido)
+        const mesa = await Mesa.findOrFail(pedido.id_mesa)
+        const usuario = await Usuario.findOrFail(pedido.id_usuario)
+        const producto = await Producto.findOrFail(detallepedido.id_producto)
+
+        await imprimirPedidoPOS({
+          mesa: mesa.numero ?? mesa.id_mesa,
+          mesero: usuario.nombre_usuario,
+          pedidoId: pedido.id_pedido,
+          detalles: [{
+            producto: producto.nombre,
+            nota: detallepedido.detalle,
+            cantidad: detallepedido.cantidad,
+          }]
+        })
+      } catch (err) {
+        console.error('Error impresión actualización:', err)
+      }
+    })
+
     return response.json(detallepedido)
   }
-
 }
