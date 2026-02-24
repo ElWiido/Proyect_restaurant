@@ -16,7 +16,7 @@ export default class extends BaseSchema {
                                 .onDelete('CASCADE')
                                 .notNullable()
       table.enum('estado', ['pendiente', 'pagado', 'cancelado', 'en preparacion']).notNullable()
-
+      table.decimal('monto_editado', 10, 2).notNullable()
       table.timestamp('fecha').defaultTo(this.now())
       table.timestamp('updated_at')
     })

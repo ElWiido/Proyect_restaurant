@@ -96,10 +96,12 @@ INSERT INTO productos (nombre, precio, categoria, descripcion, created_at, updat
 ('Sopa',7000,'otros','Sopa del dia',NOW(),NOW()),
 ('Carne',5000,'otros','Porcion de carne',NOW(),NOW()),
 ('Porcion Arroz',4000,'otros','Arroz',NOW(),NOW()),
+('Porcion Francesa',5000,'otros','Francesa',NOW(),NOW()),
 ('Empanada',2000,'otros','empanada',NOW(),NOW()),
 ('Chocolate',3000,'otros','chocolate',NOW(),NOW()),
 ('Cafe',1700,'otros','editar precio dependiendo',NOW(),NOW()),
 ('Icopor',2000,'otros','icopor',NOW(),NOW()),
+('Domicilio',0,'otros',' ',NOW(),NOW()),
 ('Productos Varios',0,'otros',' ',NOW(),NOW());
 
 

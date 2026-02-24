@@ -22,9 +22,8 @@ function lineaProductoCantidad(
   producto: string,
   cantidad: number
 ): string {
-  const sufijo = `X${cantidad}`;           // ej. "X3"
-  const prefijo = `${num}. `;              // ej. "1. "
-  // Espacio disponible para el nombre (dejamos 1 char de separación)
+  const sufijo = `X${cantidad}`;
+  const prefijo = `${num}. `;
   const maxNombre = COLS - prefijo.length - sufijo.length - 1;
 
   let nombre = producto;
@@ -32,7 +31,6 @@ function lineaProductoCantidad(
     nombre = nombre.slice(0, maxNombre - 1) + "…";
   }
 
-  // Rellenamos con espacios para que la cantidad quede pegada a la derecha
   const espacios = COLS - prefijo.length - nombre.length - sufijo.length;
   return `${prefijo}${nombre}${" ".repeat(Math.max(1, espacios))}${sufijo}`;
 }
@@ -55,7 +53,6 @@ export async function imprimirPedidoPOS(data: {
   });
 
   // ── 🔔 Beep ANTES de imprimir ─────────────────────────────────────────────
-  // beep(tiempos, duración): 1 pitido de 100 ms
   printer.beep(1, 2);
 
   // ── Encabezado ────────────────────────────────────────────────────────────
@@ -91,31 +88,63 @@ export async function imprimirPedidoPOS(data: {
   printer.bold(false);
   printer.drawLine();
 
-  // ── Detalles del pedido ───────────────────────────────────────────────────
-  data.detalles.forEach((d, i) => {
+  // ── Detalles: separar normales y domicilio ────────────────────────────────
+  const normales = data.detalles.filter(
+    (d) => d.producto.toLowerCase() !== "domicilio"
+  );
+  const domicilio = data.detalles.find(
+    (d) => d.producto.toLowerCase() === "domicilio"
+  );
+
+  // ── Primero los productos normales ────────────────────────────────────────
+  normales.forEach((d, i) => {
     printer.bold(true);
     printer.setTextSize(1, 1);
-
-    // 👇 Línea bien alineada, cantidad siempre a la derecha
     const linea = lineaProductoCantidad(i + 1, d.producto, d.cantidad);
     printer.println(linea);
-
     printer.setTextNormal();
     printer.bold(false);
 
     if (d.nota && d.nota.trim() !== "") {
-      printer.alignCenter();
+      printer.alignLeft();
       printer.setTextSize(1, 0);
       const lineasNota = d.nota.split("\n");
-      lineasNota.forEach((linea) => {
-        printer.println(linea); 
+      lineasNota.forEach((lineaNota) => {
+        if (lineaNota.trim() !== "") {
+          printer.println(`· ${lineaNota.trim()}`);
+        }
       });
       printer.setTextSize(0, 0);
-      printer.alignLeft();
     }
 
     printer.drawLine();
   });
+
+  // ── Al final el domicilio ─────────────────────────────────────────────────
+  if (domicilio) {
+    printer.alignCenter();
+    printer.bold(true);
+    printer.setTextSize(2, 1);
+    printer.println("DOMICILIO");
+    printer.setTextNormal();
+    printer.bold(false);
+
+    if (domicilio.nota && domicilio.nota.trim() !== "") {
+      printer.setTextSize(1, 1);
+      printer.bold(true);
+      const lineasNota = domicilio.nota.split("\n");
+      lineasNota.forEach((lineaNota) => {
+        if (lineaNota.trim() !== "") {
+          printer.println(lineaNota.trim());
+        }
+      });
+      printer.bold(false);
+      printer.setTextSize(0, 0);
+    }
+
+    printer.alignLeft();
+    printer.drawLine();
+  }
 
   printer.setTextSize(0, 0);
   printer.bold(false);
@@ -131,4 +160,5 @@ export async function imprimirPedidoPOS(data: {
   printer.cut();
 
   await printer.execute();
+  //console.log(printer.getText());
 }

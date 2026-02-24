@@ -21,6 +21,9 @@ export default class Pedido extends BaseModel {
   @column()
   declare estado: 'pendiente' | 'pagado' | 'cancelado' | 'en preparacion'
 
+  @column()
+  declare monto_editado: number
+
   @column.dateTime({autoCreate: true})
   declare fecha: DateTime
 

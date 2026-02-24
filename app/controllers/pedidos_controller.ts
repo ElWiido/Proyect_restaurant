@@ -19,8 +19,19 @@ interface DetalleInput {
 const productosSoloBebidas = [
   'Gaseosa Personal',
   'Gaseosa 1.5L',
+  'Coca-Cola 1.5L',
+  'Botella con agua',
+  'Gatorade',
+  'Pony Malta',
+  'SpeedMax',
+  'Bretaña',
+  'Hidralyte',
+  'Vive100',
+  'Amper',
+  'Sabiloe',
   'Cerveza',
   'Cafe',
+  'Chocolate',
   'Empanada',
   'Icopor',
 ]
@@ -56,10 +67,17 @@ export default class PedidosController {
         productos.map(p => [p.id_producto, p])
       )
 
+      // ✅ Calcular monto_editado = suma de precio_unitario * cantidad
+      const monto_editado = data.detalles.reduce((sum, d) => {
+        const precio = productosMap.get(d.id_producto)?.precio ?? 0
+        return sum + Number(precio) * d.cantidad
+      }, 0)
+
       const pedido = await Pedido.create({
         id_mesa: data.id_mesa,
         id_usuario: data.id_usuario,
         estado: 'pendiente',
+        monto_editado,
         fecha: hora_local,
       }, { client: trx })
 
@@ -89,11 +107,12 @@ export default class PedidosController {
         id_mesa: pedido.id_mesa,
         id_usuario: pedido.id_usuario,
         estado: pedido.estado,
+        monto_editado: pedido.monto_editado,
         detalles,
         creado: pedido.fecha,
       })
 
-      //Verificar si TODOS los productos son solo bebidas simples
+      // Verificar si TODOS los productos son solo bebidas simples
       const todosSonSoloBebidas = detalles.every(d => {
         const producto = productosMap.get(d.id_producto)
         return productosSoloBebidas
@@ -102,7 +121,6 @@ export default class PedidosController {
       })
 
       if (!todosSonSoloBebidas) {
-        //Imprimir TODO el pedido
         imprimirPedidoPOS({
           mesa: mesa.numero ?? mesa.id_mesa,
           mesero: usuario.nombre_usuario,
@@ -117,7 +135,7 @@ export default class PedidosController {
         })
       }
 
-      //Sockets
+      // Sockets
       const io = getIO()
 
       io.to('mesas').emit('mesa_actualizada', {
@@ -132,6 +150,7 @@ export default class PedidosController {
         id_mesa: data.id_mesa,
         id_usuario: data.id_usuario,
         estado: 'pendiente',
+        monto_editado: pedido.monto_editado,
         detalles,
         timestamp: new Date(),
       })
@@ -205,7 +224,6 @@ export default class PedidosController {
     }
   }
 
-  //Buscar pedido por ID
   public async findById({ params, response }: HttpContext) {
     try {
       const pedido = await Pedido.findOrFail(params.id)
@@ -223,14 +241,12 @@ export default class PedidosController {
       const pedido = await Pedido.findOrFail(params.id)
       const data = request.only(['id_mesa', 'id_usuario', 'estado'])
       const hora_actualizacion = DateTime.now().setZone('America/Bogota')
-      
+
       pedido.merge({ ...data, updated_at: hora_actualizacion })
       await pedido.save()
 
-      // Obtener instancia de Socket.IO
       const io = getIO()
 
-      // Emitir evento WebSocket si cambió el estado
       if (data.estado) {
         io.to('pedidos').emit('pedido_actualizado', {
           id_pedido: pedido.id_pedido,
@@ -247,7 +263,29 @@ export default class PedidosController {
     }
   }
 
-  //agregar productos al pedido
+  // ✅ Nuevo: admin edita el monto manualmente
+  public async updateMonto({ params, request, response }: HttpContext) {
+    try {
+      const pedido = await Pedido.findOrFail(params.id)
+      const { monto_editado } = request.only(['monto_editado'])
+
+      if (monto_editado === undefined || monto_editado === null) {
+        return response.badRequest({ error: 'monto_editado es requerido' })
+      }
+
+      pedido.merge({
+        monto_editado: Number(monto_editado),
+        updated_at: DateTime.now().setZone('America/Bogota'),
+      })
+      await pedido.save()
+
+      return response.json({ id_pedido: pedido.id_pedido, monto_editado: pedido.monto_editado })
+    } catch (error) {
+      console.error(error)
+      return response.status(404).json({ error: 'Pedido no encontrado o error al actualizar monto' })
+    }
+  }
+
   public async addProducto({ params, request, response }: HttpContext) {
     const trx = await db.transaction()
 
@@ -303,15 +341,34 @@ export default class PedidosController {
       })
 
       await DetallePedido.createMany(detalles, { client: trx })
+
+      //Sumar los nuevos productos al monto_editado actual
+      const sumaNuevos = detalles.reduce((sum, d) => {
+        return sum + Number(d.precio_unitario) * d.cantidad
+      }, 0)
+
+      // Primero obtener el monto actual
+      const pedidoActual = await Pedido.query({ client: trx })
+        .where('id_pedido', pedido.id_pedido)
+        .firstOrFail()
+
+      const nuevoMonto = Number(pedidoActual.monto_editado) + sumaNuevos
+
+      await Pedido.query({ client: trx })
+        .where('id_pedido', pedido.id_pedido)
+        .update({
+          monto_editado: nuevoMonto,
+          updated_at: hora.toUTC().toFormat('yyyy-MM-dd HH:mm:ss'), // ✅ sin timezone
+        })
+
       await trx.commit()
 
-      //IMPRESIÓN EN UNA SOLA COMANDA
+      // Impresión
       setImmediate(async () => {
         try {
           const mesa = await Mesa.findOrFail(pedido.id_mesa)
           const usuario = await Usuario.findOrFail(pedido.id_usuario)
 
-          //Validar si TODOS los productos son solo bebidas
           const todosSonSoloBebidas = detalles.every(d => {
             const producto = productosMap.get(d.id_producto)
             return productosSoloBebidas
@@ -319,7 +376,6 @@ export default class PedidosController {
               .includes((producto?.nombre ?? '').toLowerCase())
           })
 
-          //Solo imprimir si NO son solo bebidas
           if (!todosSonSoloBebidas) {
             await imprimirPedidoPOS({
               mesa: mesa.numero ?? mesa.id_mesa,
@@ -338,7 +394,7 @@ export default class PedidosController {
         }
       })
 
-      //SOCKET
+      // Socket
       const io = getIO()
       io.to('pedidos').emit('productos_agregados', {
         id_pedido: pedido.id_pedido,
@@ -358,7 +414,6 @@ export default class PedidosController {
     }
   }
 
-  //Mesas pendientes
   public async findPendientesByMesa({ params, response }: HttpContext) {
     try {
       const pedidos = await Pedido.query()
@@ -387,18 +442,15 @@ export default class PedidosController {
     }
   }
 
-  // Cancelar/eliminar pedido
   public async destroy({ params, response }: HttpContext) {
     const trx = await db.transaction()
     try {
       const pedido = await Pedido.findOrFail(params.id)
 
-      // Eliminar detalles primero
       await DetallePedido.query({ client: trx })
         .where('id_pedido', pedido.id_pedido)
         .delete()
 
-      // Liberar la mesa
       await Mesa.query({ client: trx })
         .where('id_mesa', pedido.id_mesa)
         .update({ estado: 'libre' })
@@ -406,7 +458,6 @@ export default class PedidosController {
       await pedido.useTransaction(trx).delete()
       await trx.commit()
 
-      // Socket
       const io = getIO()
       io.to('mesas').emit('mesa_actualizada', {
         id_mesa: pedido.id_mesa,

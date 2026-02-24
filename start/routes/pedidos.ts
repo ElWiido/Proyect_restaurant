@@ -11,6 +11,7 @@ router.group(() => {
   router.put('/pedidos/:id', [PedidosController, 'update'])
   router.get('/pedidos/mesa/:id/pendientes', [PedidosController, 'findPendientesByMesa'])
   router.delete('/pedidos/:id', [PedidosController, 'destroy'])
+  router.patch('/pedidos/:id/monto', [PedidosController, 'updateMonto'])
 })
 
 export default router
