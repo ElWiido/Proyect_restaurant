@@ -5,7 +5,8 @@ select * from mesas;
 select * from pedidos;
 select * from detalle_pedidos;
 select * from productos;
-select * from pagos;
+SELECT * FROM pagos 
+LIMIT 1000;
 
 INSERT INTO mesas (numero, estado, created_at, updated_at) VALUES
 ('1','libre',NOW(),NOW()),
@@ -72,6 +73,9 @@ INSERT INTO productos (nombre, precio, categoria, descripcion, created_at, updat
 ('Picada',24000,'asados','Carne asada, chicharrón, chorizo, papas fritas, plátano maduro, ensalada, arepa',NOW(),NOW()),
 
 ('Caldo de Costilla',14000,'desayuno','Costilla, albóndigas, pollo o pescado, arroz, arepa, chocolate',NOW(),NOW()),
+('Caldo de Albondigas',14000,'desayuno','Costilla, albóndigas, pollo o pescado, arroz, arepa, chocolate',NOW(),NOW()),
+('Caldo de Pollo',14000,'desayuno','Costilla, albóndigas, pollo o pescado, arroz, arepa, chocolate',NOW(),NOW()),
+('Caldo de Pescado',14000,'desayuno','Costilla, albóndigas, pollo o pescado, arroz, arepa, chocolate',NOW(),NOW()),
 ('Calentado',14000,'desayuno','Carne asada, chicharrón, chorizo o huevos, arepa, queso, chocolate',NOW(),NOW()),
 ('Migas con Queso',11000,'desayuno','Migas, queso, chocolate',NOW(),NOW()),
 ('Desayuno de la Casa',15000,'desayuno','Carne molida, huevos pericos, arroz, arepa, queso, chocolate',NOW(),NOW()),
@@ -95,13 +99,34 @@ INSERT INTO productos (nombre, precio, categoria, descripcion, created_at, updat
 
 ('Sopa',7000,'otros','Sopa del dia',NOW(),NOW()),
 ('Carne',5000,'otros','Porcion de carne',NOW(),NOW()),
+('Adicional de huevo',2000,'otros','huevos',NOW(),NOW()),
 ('Porcion Arroz',4000,'otros','Arroz',NOW(),NOW()),
 ('Porcion Francesa',5000,'otros','Francesa',NOW(),NOW()),
 ('Empanada',2000,'otros','empanada',NOW(),NOW()),
 ('Chocolate',3000,'otros','chocolate',NOW(),NOW()),
 ('Cafe',1700,'otros','editar precio dependiendo',NOW(),NOW()),
+('Pintadito',2500,'otros','editar precio dependiendo',NOW(),NOW()),
+('Milito',3500,'otros','editar precio dependiendo',NOW(),NOW()),
+('Milo',4500,'otros','editar precio dependiendo',NOW(),NOW()),
+('Mazamorra',2000,'otros','mazamorra',NOW(),NOW()),
 ('Icopor',2000,'otros','icopor',NOW(),NOW()),
 ('Domicilio',0,'otros',' ',NOW(),NOW()),
 ('Productos Varios',0,'otros',' ',NOW(),NOW());
 
+update pagos
+set metodo_pago = "transferencia"
+where id_pago = 867;
 
+update pagos
+set monto = 2500000
+where id_pago = 781;
+
+update pedidos
+set id_mesa = 17
+where id_pedido = 582;
+
+update mesas
+set estado = "ocupada"
+where id_mesa = 17;
+
+describe pagos

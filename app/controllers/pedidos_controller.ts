@@ -30,10 +30,16 @@ const productosSoloBebidas = [
   'Amper',
   'Sabiloe',
   'Cerveza',
+  'Sopa',
+  'Carne',
+  'Porcion Arroz',
+  'Porcion Francesa',
   'Cafe',
   'Chocolate',
   'Empanada',
   'Icopor',
+  'Mazamorra',
+  'Pintadito',
 ]
 
 
@@ -230,7 +236,12 @@ export default class PedidosController {
       await pedido.load('detalles', (query) => {
         query.preload('producto')
       })
-      return response.json(pedido)
+      await pedido.load('usuario')
+
+      return response.json({
+        ...pedido.serialize(),
+        nombreUsuario: pedido.usuario?.nombre_usuario ?? '',
+      })
     } catch {
       return response.notFound({ error: 'Pedido no encontrado' })
     }
@@ -263,7 +274,7 @@ export default class PedidosController {
     }
   }
 
-  // ✅ Nuevo: admin edita el monto manualmente
+  //admin edita el monto manualmente
   public async updateMonto({ params, request, response }: HttpContext) {
     try {
       const pedido = await Pedido.findOrFail(params.id)
@@ -439,6 +450,66 @@ export default class PedidosController {
     } catch (error) {
       console.error(error)
       return response.internalServerError({ error: 'Error al buscar pedidos pendientes' })
+    }
+  }
+
+  //Cambiar mesa de un pedido pendiente
+  public async cambiarMesa({ params, request, response }: HttpContext) {
+    const trx = await db.transaction()
+    try {
+      const pedido = await Pedido.findOrFail(params.id)
+
+      if (pedido.estado === 'pagado' || pedido.estado === 'cancelado') {
+        await trx.rollback()
+        return response.badRequest({ error: 'No se puede cambiar la mesa de un pedido cerrado' })
+      }
+
+      const { id_mesa_nueva } = request.only(['id_mesa_nueva'])
+      if (!id_mesa_nueva) {
+        await trx.rollback()
+        return response.badRequest({ error: 'id_mesa_nueva es requerido' })
+      }
+
+      const mesaNueva = await Mesa.find(id_mesa_nueva)
+      if (!mesaNueva) {
+        await trx.rollback()
+        return response.notFound({ error: 'Mesa destino no encontrada' })
+      }
+
+      const mesaAnteriorId = pedido.id_mesa
+      const hora = DateTime.now().setZone('America/Bogota')
+
+      // Liberar mesa anterior
+      await Mesa.query({ client: trx })
+        .where('id_mesa', mesaAnteriorId)
+        .update({ estado: 'libre' })
+
+      // Ocupar mesa nueva
+      await Mesa.query({ client: trx })
+        .where('id_mesa', id_mesa_nueva)
+        .update({ estado: 'ocupada' })
+
+      // Actualizar pedido
+      await Pedido.query({ client: trx })
+        .where('id_pedido', pedido.id_pedido)
+        .update({ id_mesa: id_mesa_nueva, updated_at: hora.toUTC().toFormat('yyyy-MM-dd HH:mm:ss') })
+
+      await trx.commit()
+
+      const io = getIO()
+      io.to('mesas').emit('mesa_actualizada', { id_mesa: mesaAnteriorId, estado: 'libre', timestamp: new Date() })
+      io.to('mesas').emit('mesa_actualizada', { id_mesa: id_mesa_nueva, estado: 'ocupada', timestamp: new Date() })
+
+      return response.json({
+        message: 'Mesa cambiada correctamente',
+        id_pedido: pedido.id_pedido,
+        id_mesa_anterior: mesaAnteriorId,
+        id_mesa_nueva,
+      })
+    } catch (error: any) {
+      await trx.rollback()
+      console.error(error)
+      return response.status(500).json({ error: 'Error al cambiar mesa', detalle: error.message })
     }
   }
 

@@ -7,6 +7,7 @@ import DetallePedido from '#models/detalle_pedido'
 import { DateTime } from 'luxon'
 import db from '@adonisjs/lucid/services/db'
 import { getIO } from '#start/socket'
+import vine from '@vinejs/vine'
 
 
 export default class PagosController {
@@ -54,17 +55,14 @@ export default class PagosController {
 
       await trx.commit()
 
-      // Obtener instancia de Socket.IO
       const io = getIO()
 
-      // Evento para actualizar la mesa
       io.to('mesas').emit('mesa_actualizada', {
         id_mesa: pedido.id_mesa,
         estado: 'libre',
         timestamp: new Date(),
       })
 
-      // Evento para actualizar el pago
       io.to('pagos').emit('pago_completado', {
         id_pago: pago.id_pago,
         id_pedido: pago.id_pedido,
@@ -90,7 +88,45 @@ export default class PagosController {
     }
   }
 
-  //Buscar un pago por ID
+  // ── Actualizar método de pago ─────────────────────────────────────────────
+  public async updateMetodoPago({ params, request, response }: HttpContext) {
+    try {
+      const validator = vine.compile(
+        vine.object({
+          metodo_pago: vine.enum(['efectivo', 'transferencia', 'anotar']),
+        })
+      )
+      const { metodo_pago } = await request.validateUsing(validator)
+
+      const pago = await Pago.findOrFail(params.id)
+
+      const hora_local = DateTime.now().setZone('America/Bogota')
+      pago.metodo_pago = metodo_pago
+      pago.updated_at = hora_local
+      await pago.save()
+
+      // Emitir evento para que otros dispositivos actualicen la vista
+      const io = getIO()
+      io.to('pagos').emit('pago_metodo_actualizado', {
+        id_pago: pago.id_pago,
+        metodo_pago: pago.metodo_pago,
+        timestamp: new Date(),
+      })
+
+      return response.json({
+        id_pago: pago.id_pago,
+        metodo_pago: pago.metodo_pago,
+      })
+    } catch (error: any) {
+      if (error.code === 'E_ROW_NOT_FOUND') {
+        return response.notFound({ error: 'Pago no encontrado' })
+      }
+      console.error(error)
+      return response.status(500).json({ error: 'Error al actualizar método de pago', detalle: error.message })
+    }
+  }
+
+  // ── Buscar un pago por ID ─────────────────────────────────────────────────
   public async findById({ params, response }: HttpContext) {
     try {
       const pago = await Pago.findOrFail(params.id)
@@ -100,12 +136,12 @@ export default class PagosController {
     }
   }
 
-  //Mostrar el total de pagos realizados en una fecha específica sumados y excluyendo los pagos anotados
+  // ── Total de pagos en una fecha (excluye anotados) ────────────────────────
   public async findByDate({ params, response }: HttpContext) {
     try {
       const row = await Pago.query()
         .whereRaw('DATE(created_at) = ?', [params.fecha])
-        .where('metodo_pago', '!=', 'anotar') // ✅ excluye los anotados
+        .where('metodo_pago', '!=', 'anotar')
         .sum('monto as total')
         .first()
 
@@ -117,7 +153,7 @@ export default class PagosController {
     }
   }
 
-  //Mostrar todos los pagos realizados en una fecha específica
+  // ── Todos los pagos de una fecha ──────────────────────────────────────────
   public async getAllbyDate({ params, response }: HttpContext) {
     try {
       const pagos = await Pago.query()

@@ -6,6 +6,7 @@ router.group(() => {
   router.get('/pagos/:id', [PagosController, 'findById'])
   router.get('/pagos/date/:fecha', [PagosController, 'findByDate'])
   router.post('/pagos', [PagosController, 'create'])
+  router.patch('/pagos/:id/metodo', [PagosController, 'updateMetodoPago'])
 })
 
 export default router
