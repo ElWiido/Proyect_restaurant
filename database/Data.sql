@@ -111,7 +111,8 @@ INSERT INTO productos (nombre, precio, categoria, descripcion, created_at, updat
 ('Mazamorra',2000,'otros','mazamorra',NOW(),NOW()),
 ('Icopor',2000,'otros','icopor',NOW(),NOW()),
 ('Domicilio',0,'otros',' ',NOW(),NOW()),
-('Productos Varios',0,'otros',' ',NOW(),NOW());
+('Productos Varios',0,'otros',' ',NOW(),NOW()),
+('Productos Mostrador',0,'otros',' ',NOW(),NOW());
 
 update pagos
 set metodo_pago = "transferencia"

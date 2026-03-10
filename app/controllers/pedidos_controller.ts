@@ -40,6 +40,9 @@ const productosSoloBebidas = [
   'Icopor',
   'Mazamorra',
   'Pintadito',
+  'Milo',
+  'Milito',
+  'Productos Mostrador',
 ]
 
 
