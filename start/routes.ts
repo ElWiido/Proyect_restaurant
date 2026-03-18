@@ -1,15 +1,14 @@
 import router from '@adonisjs/core/services/router'
 
-router.get('/', async () => {
-  return {
-    hello: 'world',
-  }
-})
+router.get('/', async () => ({ hello: 'world' }))
 
-import "./routes/usuarios.js";
-import "./routes/mesas.js";
-import "./routes/pagos.js"
-import "./routes/producto.js"
-import "./routes/pedidos.js"
-import "./routes/detalle_pedidos.js"
-import "./routes/login.js"
+import './routes/usuarios.js'
+import './routes/mesas.js'
+import './routes/pagos.js'
+import './routes/producto.js'
+import './routes/pedidos.js'
+import './routes/detalle_pedidos.js'
+import './routes/login.js'
+import './routes/ranking.js'
+import './routes/imprimir.js'
+import './routes/menu_dia.js'

@@ -8,6 +8,9 @@ tmp
 .env.local
 .env.production.local
 .env.development.local
+menu_dia.json
+print_jobs.json
+
 
 # Frontend assets compiled code
 public/assets

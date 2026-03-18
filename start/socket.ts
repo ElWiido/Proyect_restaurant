@@ -19,7 +19,6 @@ app.ready(async () => {
       origin: '*',
       methods: ['GET', 'POST'],
     },
-    // ✅ detecta clientes caídos más rápido y permite reconexión
     pingTimeout: 10000,
     pingInterval: 5000,
   })
@@ -44,8 +43,12 @@ app.ready(async () => {
       console.log(`📌 ${socket.id} unido a canal: pagos`)
     })
 
+    socket.on('join_menu_dia', () => {
+      socket.join('menu_dia')
+      console.log(`📌 ${socket.id} unido a canal: menu_dia`)
+    })
+
     socket.on('disconnect', (reason) => {
-      //loguea el motivo de desconexión para debug
       console.log(`❌ Cliente desconectado: ${socket.id} — motivo: ${reason}`)
     })
   })
